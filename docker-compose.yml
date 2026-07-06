@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: order_db
+    environment:
+      POSTGRES_USER: springuser
+      POSTGRES_PASSWORD: springpassword
+      POSTGRES_DB: orders
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:7.0
+    container_name: inventory_db
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # Configuriamo 3 canali: uno interno per Docker, uno esterno per l'IDE, uno per il controller KRaft
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://127.0.0.1:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      # KRaft richiede un Cluster ID per formattare lo storage. È una stringa casuale in Base64.
+      CLUSTER_ID: "ci24y0w5Tg-3a21rM685Vw"
+      # Essendo un nodo singolo, forziamo i fattori di replica a 1 per non generare errori
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
